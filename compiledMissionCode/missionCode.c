@@ -1,32 +1,40 @@
 #include "xc.h"
+#include <math.h>
 #pragma config FNOSC = FRCDIV // 8MHz oscillator
 #pragma config OSCIOFNC = OFF
+#pragma config SOSCSRC = DIG
 
 // 1 : 1/8, 2: 1/4, 4: 1/2, 8: 1
-#define FACTOR 2
+#define FACTOR 1
 
 #define QRD_THRESHOLD 2048
 #define QRD_BALL_THRESHOLD 1000
 
 // decreasing speeds her up (runs fine at 76)
-#define LINE_FOLLOWING_SPEED 50 // 1/(8MHz/(2*64)) -> (0.5/400)/0.000016 -1 = 77
+#define LINE_FOLLOWING_SPEED 76 // 1/(8MHz/(2*64)) -> (0.5/400)/0.000016 -1 = 77
 
 // best range seems to be .3-.4? .5 worked too but .3 was maybe too sensitive
-#define SHARP_THRESHOLD_LEFT .375
+#define SHARP_THRESHOLD_LEFT .3
 #define SHARP_THRESHOLD_FRONT 1
-#define QTR_TURN 1000/FACTOR
+#define QTR_TURN 900/FACTOR
 //#define CANYON_SPEED 3088
-#define CANYON_SPEED 25
+#define CANYON_SPEED 76
 
 #define QRD_CENTER ADC1BUF4
 #define QRD_LEFT ADC1BUF13
 #define QRD_RIGHT ADC1BUF14
 #define QRD_BALL_RETURN ADC1BUF9
 
-#define BC_FORWARD 700/FACTOR
-#define BC_BACKWARD 800/FACTOR
-#define BC_SERVO_START 95
-#define BC_SERVO_END 64
+#define PHOTODIODE_SATELLITE ADC1BUF12
+#define PHOTODIODE_BALLCOLLECT ADC1BUF0
+
+#define BR_FORWARD 700/FACTOR
+#define BR_BACKWARD 800/FACTOR
+#define BC_FORWARD 1200/FACTOR
+#define BC_BACKWARD 2300/FACTOR
+
+#define BR_SERVO_START 95
+#define BR_SERVO_END 64
 
 void config_ad(void)
 {
@@ -49,7 +57,7 @@ void config_ad(void)
                   // location corresponding to channel
     _CSCNA = 1;   // AD1CON2<10> -- Scans inputs specified
                   // in AD1CSSx registers
-    _SMPI = 5;	  // AD1CON2<6:2> -- Every 9th conversion sent (number of channels sampled -1)
+    _SMPI = 7;	  // AD1CON2<6:2> -- Every 9th conversion sent (number of channels sampled -1)
                   // to buffer (if sampling 10 channels)
     _ALTS = 0;    // AD1CON2<0> -- Sample MUXA only
 
@@ -76,6 +84,12 @@ void config_ad(void)
     // QRD BALL
     _CSS9 = 1;
     
+    // Photodiode Satellite
+    _CSS15 = 1;
+    
+    // Photodiode Ball Pickup
+    _CSS0 = 1;
+    
     _ADON = 1;    // AD1CON1<15> -- Turn on A/D
 }
 
@@ -91,7 +105,7 @@ int main(void) {
     // clock source
     _TCS = 0;
     // prescale is 64
-    _TCKPS = 10;
+    _TCKPS = 0b10;
     
     _RCDIV = 0b110;
     
@@ -116,7 +130,7 @@ int main(void) {
     // PWM period for servo (50 hz)
     OC1RS = 1249;
     // Use INT: Min pulse width 0.5ms (31.25), Max 2.5ms (156.25)
-    OC1R = BC_SERVO_START;
+    OC1R = BR_SERVO_START;
     
     // SHARP Sensor Setup
     // FRONT
@@ -137,11 +151,18 @@ int main(void) {
     _TRISA3 = 1;
     _ANSA3 = 1;
     
+    // IR Sensor Satellite Setup
+    _ANSB4 = 1;
+    _TRISB4 = 1;
+    
+    // IR Sensor Ball Pickup
+    _ANSA0 = 1;
+    _TRISA0 = 1;
+    
     config_ad();
     
-    // A0 = pin 2, to DIR on driver, chooses direction
-    _TRISA0 = 0;
-    _ANSA0 = 0;
+    // B7 = pin 11, to DIR on driver, chooses direction
+    _TRISB7 = 1;
     
     // A1 = pin 3, to DIR on driver, choose direction
     _TRISA1 = 0;
@@ -156,7 +177,7 @@ int main(void) {
     OC2R = OC2RS/2;
     
     // choose DIR for right wheel
-    _LATA0 = 1;
+    _LATB7 = 1;
     // choose DIR for left wheel
     _LATA1 = 1;
     
@@ -165,22 +186,19 @@ int main(void) {
     _OC2IE = 1;
     _OC2IP = 4;
     
-    // LED config
-    _TRISB8 = 0;
-    _TRISB7 = 0;
-    
     // Laser setup
-    _ANSB12 = 0;
-    _TRISB12 = 0;
+    _TRISB9 = 0;
     
     static int didCanyon = 0;
+    static int ballCollected = 0;
     static int ballReturned = 0;
     
     // LF - Line Following
     // CN - Canyon Navigation
-    enum State {LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
-    static enum State state = LeaveLander;
+    enum State {Finished, BallCollect, Satellite, LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
+    static enum State state = LFDriveForward;
     
+    // Pause before going to allow microcontroller to start up
     OC2R = 0;
     OC3R = 0;
     step = 0;
@@ -193,13 +211,12 @@ int main(void) {
         double SHARP_LEFT = ADC1BUF10*3.3/4095;
         
         // LEDs
-//        _LATB7 = (SHARP_FRONT > SHARP_THRESHOLD_FRONT);
-        _LATB7 = didCanyon;
-//        _LATB8 = (SHARP_LEFT > SHARP_THRESHOLD_LEFT);
-        _LATB8 = (QRD_BALL_RETURN*3.3/4095 > 1);
         
         switch(state)
         {
+            case Finished:
+                break;
+                
             case LeaveLander:
                 
                 OC2RS = LINE_FOLLOWING_SPEED;
@@ -210,7 +227,7 @@ int main(void) {
                 // sees white on all three?
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     step = 0;
-                    while (step < 650/FACTOR) {}
+                    while (step < 750/FACTOR) {}
                     _LATA1 = 0;
                     step = 0;
                     while (step < QTR_TURN) {}
@@ -221,11 +238,7 @@ int main(void) {
                 break;
                 
             case LFDriveForward:
-                
-                // Laser on
-                _LATB12 = 1;
-                
-                _LATA0 = 1;
+                _LATB7 = 1;
                 _LATA1 = 1;
                 
                 OC2RS = LINE_FOLLOWING_SPEED;
@@ -237,8 +250,9 @@ int main(void) {
                 if (QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     state = CNDriveForward;
                 }
-                // see white and left sees box
-                else if (!ballReturned && QRD_CENTER < QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
+                
+                // see white and left sees box and ball has been collected, return ball
+                else if (ballCollected && !ballReturned && QRD_CENTER < QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     state = BallReturn;
                 }
                 
@@ -257,6 +271,19 @@ int main(void) {
                 else if (QRD_CENTER > QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     state = LFTurnLeft;
                 }
+                
+                // see all black and already did canyon and ball collect, in lander?
+                else if (didCanyon && ballReturned && QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD) {
+                    OC3R = 0;
+                    OC2R = 0;
+                    // maybe move forward some amount to get farther into the lander?
+                    state = Satellite;
+                }
+                
+                else if (!ballCollected && PHOTODIODE_BALLCOLLECT > 600) {
+                    state = BallCollect;
+                }
+                    
                 break;
                 
             case LFTurnLeft:
@@ -283,38 +310,88 @@ int main(void) {
                 }
                 break;
             
+            case Satellite:
+                // move servo up until infrared sensor passes threshold, then shoot laser
+                while (OC1R < 110 && PHOTODIODE_SATELLITE < 600) {
+                    OC1R++;
+                }
+                
+                // Laser on
+                _LATB9 = 1;
+                state = Finished;
+                break;
+                
+            case BallCollect:
+                // move forward, turn left, back up into ball collect, collect ball, wait, move forward, turn right, line following
+                ballCollected = 1;
+                step = 0;
+                while (step < BC_FORWARD) {}
+                
+                // turn 90 degrees left
+                _LATA1 = 0;
+                step = 0;
+                while (step < QTR_TURN) {
+                }
+                
+                // back up to box
+                _LATB7 = 0;
+                step = 0;
+                while (step < BC_BACKWARD) {}
+                OC2R = 0;
+                OC3R = 0;
+                step = 0;
+                while (step < 1000/FACTOR) {}
+                OC2R = OC2RS/2;
+                OC3R = OC3RS/2;
+
+                // drive forward same amount
+                _LATB7 = 1;
+                _LATA1 = 1;
+                step = 0;
+                while (step < BC_BACKWARD) {}
+                // turn 90 degrees left
+                _LATB7 = 0;
+                step = 0;
+                while (step < QTR_TURN) {}
+                _LATB7 = 1;
+                state = LFDriveForward;
+                break;
+                
             case BallReturn:
                 ballReturned = 1;
                 // if White goes low
                 if (QRD_BALL_RETURN < QRD_BALL_THRESHOLD) {
                     step = 0;
-                    while (step < BC_FORWARD) {}
+                    while (step < BR_FORWARD) {}
                     step = 0;
                     // turn 90 degrees right
-                    _LATA0 = 0;
+                    _LATB7 = 0;
                     while (step < QTR_TURN) {
                     }
                     step = 0;
                     // back up to box
                     _LATA1 = 0;
-                    while (step < BC_BACKWARD) {}
+                    while (step < BR_BACKWARD) {}
                     step = 0;
                     // drop servo to drop ball (31 - 156)
-                    while (OC1R > BC_SERVO_END) {OC1R--;}
+                    while (OC1R > BR_SERVO_END) {OC1R--;}
                     // leave servo down
                     OC2R = 0;
                     OC3R = 0;
                     step = 0;
+                    
+                    // this causes her to wait for a second for the ball to drop
                     while (step < 1000/FACTOR) {}
                     OC2R = OC2RS/2;
                     OC3R = OC3RS/2;
 
                     // drive forward same amount
-                    _LATA0 = 1;
+                    _LATB7 = 1;
                     _LATA1 = 1;
                     step = 0;
-                    while (step < BC_BACKWARD) {}
+                    while (step < BR_BACKWARD) {}
                     step = 0;
+                    
                     // turn 90 degrees left
                     _LATA1 = 0;
                     while (step < QTR_TURN) {}
@@ -325,7 +402,7 @@ int main(void) {
                 else {
                     ballReturned = 1;
                     step = 0;
-                    while (step < BC_FORWARD) {}
+                    while (step < BR_FORWARD) {}
                     step = 0;
                     // turn 90 degrees right
                     _LATA1 = 0;
@@ -333,11 +410,11 @@ int main(void) {
                     }
                     step = 0;
                     // back up to box
-                    _LATA0 = 0;
-                    while (step < BC_BACKWARD) {}
+                    _LATB7 = 0;
+                    while (step < BR_BACKWARD) {}
                     step = 0;
                     // drop servo to drop ball (31 - 156)
-                    while (OC1R > BC_SERVO_END) {OC1R--;}
+                    while (OC1R > BR_SERVO_END) {OC1R--;}
                     // leave servo down
                     OC2R = 0;
                     OC3R = 0;
@@ -347,16 +424,16 @@ int main(void) {
                     OC3R = OC3RS/2;
 
                     // drive forward same amount
-                    _LATA0 = 1;
+                    _LATB7 = 1;
                     _LATA1 = 1;
                     step = 0;
-                    while (step < BC_BACKWARD) {}
+                    while (step < BR_BACKWARD) {}
                     step = 0;
                     // turn 90 degrees left
-                    _LATA0 = 0;
+                    _LATB7 = 0;
                     while (step < QTR_TURN) {}
                     step = 0;
-                    _LATA0 = 1;
+                    _LATB7 = 1;
                     state = LFDriveForward;
                 }
                 break;
@@ -365,7 +442,7 @@ int main(void) {
                 // Don't move. Turn LEDs on.
                 // both motors forward
                 _LATA1 = 1;
-                _LATA0 = 1;
+                _LATB7 = 1;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
                 OC3RS = CANYON_SPEED;
@@ -382,15 +459,19 @@ int main(void) {
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT < SHARP_THRESHOLD_LEFT) {
                     didCanyon = 1;
                     step = 0;
-                    while (step < 400/FACTOR) {}
+                    
+                    // drive forward for a sec, then turn
+                    while (step < 750/FACTOR) {}
                     step = 0;
                     state = CNTurnLeft;
                 }
                 
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     didCanyon = 1;
+                    
+                    // drive forward for a sec, then turn
                     step = 0;
-                    while (step < 400/FACTOR) {}
+                    while (step < 750/FACTOR) {}
                     step = 0;
                     state = CNTurnRight;
                 }
@@ -404,6 +485,7 @@ int main(void) {
                 OC3R = OC3RS/2;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
+                step = 0;
                 if (step > QTR_TURN && didCanyon) {
                     state = LFDriveForward;
                     step = 0;
@@ -417,12 +499,13 @@ int main(void) {
                 
             case CNTurnRight:
                 // switch direction right wheel
-                _LATA0 = 0;
+                _LATB7 = 0;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
                 OC3RS = CANYON_SPEED;
                 OC3R = OC3RS/2;
                 
+                step = 0;
                 if (step > QTR_TURN && didCanyon) {
                     state = LFDriveForward;
                     step = 0;
