@@ -14,9 +14,10 @@
 #define LINE_FOLLOWING_SPEED 76 // 1/(8MHz/(2*64)) -> (0.5/400)/0.000016 -1 = 77
 
 // best range seems to be .3-.4? .5 worked too but .3 was maybe too sensitive
-#define SHARP_THRESHOLD_LEFT .3
+#define SHARP_THRESHOLD_LEFT 0.8
 #define SHARP_THRESHOLD_FRONT 1
-#define QTR_TURN 900/FACTOR
+#define SHARP_LANDER_THRESHOLD 0.8
+#define QTR_TURN 950/FACTOR
 //#define CANYON_SPEED 3088
 #define CANYON_SPEED 76
 
@@ -25,13 +26,13 @@
 #define QRD_RIGHT ADC1BUF14
 #define QRD_BALL_RETURN ADC1BUF9
 
-#define PHOTODIODE_SATELLITE ADC1BUF12
-#define PHOTODIODE_BALLCOLLECT ADC1BUF0
+#define PHOTODIODE_SATELLITE ADC1BUF0
+#define PHOTODIODE_BALLCOLLECT ADC1BUF12
 
-#define BR_FORWARD 700/FACTOR
+#define BR_FORWARD 800/FACTOR
 #define BR_BACKWARD 800/FACTOR
 #define BC_FORWARD 1200/FACTOR
-#define BC_BACKWARD 2300/FACTOR
+#define BC_BACKWARD 2150/FACTOR
 
 #define BR_SERVO_START 95
 #define BR_SERVO_END 64
@@ -85,10 +86,10 @@ void config_ad(void)
     _CSS9 = 1;
     
     // Photodiode Satellite
-    _CSS15 = 1;
+    _CSS0 = 1;
     
     // Photodiode Ball Pickup
-    _CSS0 = 1;
+    _CSS12 = 1;
     
     _ADON = 1;    // AD1CON1<15> -- Turn on A/D
 }
@@ -151,18 +152,18 @@ int main(void) {
     _TRISA3 = 1;
     _ANSA3 = 1;
     
-    // IR Sensor Satellite Setup
-    _ANSB4 = 1;
-    _TRISB4 = 1;
+    // IR Sensor Ball Pickup Setup
+    _ANSB12 = 1;
+    _TRISB12 = 1;
     
-    // IR Sensor Ball Pickup
+    // IR Sensor Satellite
     _ANSA0 = 1;
     _TRISA0 = 1;
     
     config_ad();
     
     // B7 = pin 11, to DIR on driver, chooses direction
-    _TRISB7 = 1;
+    _TRISB7 = 0;
     
     // A1 = pin 3, to DIR on driver, choose direction
     _TRISA1 = 0;
@@ -189,14 +190,28 @@ int main(void) {
     // Laser setup
     _TRISB9 = 0;
     
+    // LED
+    _TRISB8 = 0;
+    _LATB8 = 0;
+    
     static int didCanyon = 0;
     static int ballCollected = 0;
     static int ballReturned = 0;
+    static int inLander = 0;
     
+    // satellite set up configs
+    static float IR_READ_VAL;
+    IR_READ_VAL = 0.0;
+    static float ALPHA;
+    ALPHA = .8;
+    static int SERVO_STOPPED = 0;
+    static float MAX_READING = 0;
+    static float BEST_SERVO = 0;
+
     // LF - Line Following
     // CN - Canyon Navigation
     enum State {Finished, BallCollect, Satellite, LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
-    static enum State state = LFDriveForward;
+    static enum State state = LeaveLander;
     
     // Pause before going to allow microcontroller to start up
     OC2R = 0;
@@ -206,11 +221,20 @@ int main(void) {
     
     while(1) {
         
-        
         double SHARP_FRONT = ADC1BUF11*3.3/4095;
         double SHARP_LEFT = ADC1BUF10*3.3/4095;
         
         // LEDs
+        if (PHOTODIODE_BALLCOLLECT > 600) {
+            _LATB8 = 1;
+        }
+        else {
+            _LATB8 = 0;
+        }
+        
+//        if (state == LFDriveForward) {
+//            _LATB8 = 1;
+//        } else {_LATB8=0;}
         
         switch(state)
         {
@@ -246,8 +270,28 @@ int main(void) {
                 OC3RS = LINE_FOLLOWING_SPEED;
                 OC3R = OC3RS/2;
                 
+                if (!inLander && QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && didCanyon && ballReturned) {
+                    step = 0;
+                    while (step < 750/FACTOR) {}
+                    _LATA1 = 0;
+                    step = 0;
+                    while (step < QTR_TURN) {}
+                    _LATA1 = 1;
+                    inLander = 1;
+                }
+                
+                else if (inLander && SHARP_FRONT > SHARP_LANDER_THRESHOLD){
+                    OC3R = 0;
+                    OC2R = 0;
+                    state = Satellite;
+                }
+                
+                else if (!ballCollected && PHOTODIODE_BALLCOLLECT > 600) {
+                    state = BallCollect;
+                }
+                
                 // see all black, and wall on left, go to CNDrive
-                if (QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
+                else if (!didCanyon && QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     state = CNDriveForward;
                 }
                 
@@ -271,31 +315,20 @@ int main(void) {
                 else if (QRD_CENTER > QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     state = LFTurnLeft;
                 }
-                
-                // see all black and already did canyon and ball collect, in lander?
-                else if (didCanyon && ballReturned && QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD) {
-                    OC3R = 0;
-                    OC2R = 0;
-                    // maybe move forward some amount to get farther into the lander?
-                    state = Satellite;
-                }
-                
-                else if (!ballCollected && PHOTODIODE_BALLCOLLECT > 600) {
-                    state = BallCollect;
-                }
                     
                 break;
                 
             case LFTurnLeft:
                 OC3RS = LINE_FOLLOWING_SPEED;
                 OC3R = OC3RS/2;
-                OC2RS = LINE_FOLLOWING_SPEED*4;
+                OC2RS = LINE_FOLLOWING_SPEED*8;
                 OC2R = OC2RS/2;
                 
                 // if center sees black
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD) {
                     state = LFDriveForward;
                 }
+                
                 break;
                 
             case LFTurnRight:
@@ -311,15 +344,30 @@ int main(void) {
                 break;
             
             case Satellite:
+                OC3R = 0;
+                OC2R = 0;
                 // move servo up until infrared sensor passes threshold, then shoot laser
-                while (OC1R < 110 && PHOTODIODE_SATELLITE < 600) {
+                while (OC1R < 130 && SERVO_STOPPED == 0) {
+                    IR_READ_VAL = IR_READ_VAL*ALPHA + (1-ALPHA)*PHOTODIODE_SATELLITE;
+                    if (IR_READ_VAL > MAX_READING) {
+                        MAX_READING = IR_READ_VAL;
+                        BEST_SERVO = OC1R;
+                    }
+
                     OC1R++;
+                    step = 0;
+                    while (step < 10) {}
+
                 }
-                
+
+                SERVO_STOPPED = 1;
+                OC1R = BEST_SERVO;
+
                 // Laser on
                 _LATB9 = 1;
                 state = Finished;
                 break;
+
                 
             case BallCollect:
                 // move forward, turn left, back up into ball collect, collect ball, wait, move forward, turn right, line following
@@ -450,10 +498,12 @@ int main(void) {
                 // if you see front but not left, turn left
                 if (SHARP_FRONT > SHARP_THRESHOLD_FRONT && SHARP_LEFT < SHARP_THRESHOLD_LEFT) {
                     state = CNTurnLeft;
+                    step = 0;
                 }
                 // if you see front and left, turn right
                 else if (SHARP_FRONT > SHARP_THRESHOLD_FRONT && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     state = CNTurnRight;
+                    step = 0;
                 }
                 
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT < SHARP_THRESHOLD_LEFT) {
@@ -485,15 +535,12 @@ int main(void) {
                 OC3R = OC3RS/2;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
-                step = 0;
                 if (step > QTR_TURN && didCanyon) {
                     state = LFDriveForward;
-                    step = 0;
                 }
                 // if step counter runs out
                 else if (step > QTR_TURN) {
                     state = CNDriveForward;
-                    step = 0;
                 }
                 break;
                 
@@ -505,16 +552,13 @@ int main(void) {
                 OC3RS = CANYON_SPEED;
                 OC3R = OC3RS/2;
                 
-                step = 0;
                 if (step > QTR_TURN && didCanyon) {
                     state = LFDriveForward;
-                    step = 0;
                 }
                 
                 // if step counter runs out
                 else if (step > QTR_TURN) {
                     state = CNDriveForward;
-                    step = 0;
                 }
                 break;
                 
