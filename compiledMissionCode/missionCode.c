@@ -89,7 +89,7 @@ int main(void) {
                 OC3RS = LINE_FOLLOWING_SPEED;
                 OC3R = OC3RS/2;
                 
-                if (!inLander && QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && didCanyon && ballReturned) {
+                if (!inLander && QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && QRD_FAR_LEFT < QRD_THRESHOLD && didCanyon && ballReturned) {
                     step = 0;
                     while (step < 750/FACTOR) {}
                     _LATA1 = 0;
