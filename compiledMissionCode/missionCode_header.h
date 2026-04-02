@@ -223,7 +223,6 @@ void motor_config() {
     
     // B8 = pin 12, to DIR on driver, choose direction
     _TRISB8 = 0;
-    _ANSB8 = 0;
     
     // choose PWM period for right wheel
     OC3RS = LINE_FOLLOWING_SPEED;
