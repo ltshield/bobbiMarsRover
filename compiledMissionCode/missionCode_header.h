@@ -216,9 +216,9 @@ void motor_config() {
     // B7 = pin 11, to DIR on driver, chooses direction
     _TRISB7 = 0;
     
-    // A1 = pin 3, to DIR on driver, choose direction
-    _TRISA1 = 0;
-    _ANSA1 = 0;
+    // B8 = pin 12, to DIR on driver, choose direction
+    _TRISB8 = 0;
+    _ANSB8 = 0;
     
     // choose PWM period for right wheel
     OC3RS = LINE_FOLLOWING_SPEED;
@@ -231,7 +231,7 @@ void motor_config() {
     // choose DIR for right wheel
     _LATB7 = 1;
     // choose DIR for left wheel
-    _LATA1 = 1;
+    _LATB8 = 1;
 }
 
 
