@@ -105,7 +105,7 @@ void config_ad(void)
                   // location corresponding to channel
     _CSCNA = 1;   // AD1CON2<10> -- Scans inputs specified
                   // in AD1CSSx registers
-    _SMPI = 7;	  // AD1CON2<6:2> -- Every 9th conversion sent (number of channels sampled -1)
+    _SMPI = 8;	  // AD1CON2<6:2> -- Every 9th conversion sent (number of channels sampled -1)
                   // to buffer (if sampling 10 channels)
     _ALTS = 0;    // AD1CON2<0> -- Sample MUXA only
 
@@ -123,6 +123,8 @@ void config_ad(void)
     _CSS13 = 1;
     // RIGHT QRD
     _CSS14 = 1;
+    // FAR_LEFT QRD
+    _CSS1 = 1;
     
     // LEFT SHARP
     _CSS10 = 1;
@@ -202,6 +204,9 @@ void sensor_config() {
     //RIGHT
     _TRISA3 = 1;
     _ANSA3 = 1;
+    //FAR_LEFT, pin 
+    _TRISA1 = 1;
+    _ANSA1 = 1;
     
     // IR Sensor Ball Pickup Setup
     _ANSB12 = 1;
