@@ -1,5 +1,8 @@
 # bobbiMarsRover
 
+## B0BB1's Demo Video
+(Video of course completion)
+
 ## B0BB1's Purpose
 B0BB1 was a robotic rover created as a class project for BYU's Mechatronics class. B0BB1 was built to autonomously explore the surface of Mars and complete a variety of tasks. These tasks included:
 - following GPS waypoints to navigate an unfamiliar environment
@@ -22,13 +25,11 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
 - Data transmission required the lander to locate and re-enter the lander and detect the vertical location of a satellite above the lander by sensing an IR emitter in the center of the target satellite. Upon locating the vertical location of the satellite, B0BB1 was to turn on a laser thereby representing the transmission of the data that had been gathered during the run.
 
 ## B0BB1's Hardware
-
 (CAD Render Before)
 (CAD Render After)
 
 (Pin Layout)
-(Circuit Diagram)
+(Circuit)
 
 ## B0BB1's Software
-
 (FSM Diagram)
