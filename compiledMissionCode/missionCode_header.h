@@ -248,8 +248,4 @@ void CI_laser_LED_config() {
     
     // Laser setup
     _TRISB9 = 0;
-    
-    // LED
-    _TRISB8 = 0;
-    _LATB8 = 0;
 }

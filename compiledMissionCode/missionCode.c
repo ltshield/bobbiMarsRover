@@ -1,3 +1,5 @@
+
+
 #include "xc.h"
 #include <math.h>
 #include <missionCode_header.h>
@@ -43,13 +45,13 @@ int main(void) {
         double SHARP_FRONT = ADC1BUF11*3.3/4095;
         double SHARP_LEFT = ADC1BUF10*3.3/4095;
         
-        // LEDs
-        if (PHOTODIODE_BALLCOLLECT > 600) {
-            _LATB8 = 1;
-        }
-        else {
-            _LATB8 = 0;
-        }
+        // LEDs debugging, not configured
+        // if (PHOTODIODE_BALLCOLLECT > 600) {
+        //     _LATB8 = 1;
+        // }
+        // else {
+        //     _LATB8 = 0;
+        // }
         
 //        if (state == LFDriveForward) {
 //            _LATB8 = 1;
@@ -71,10 +73,10 @@ int main(void) {
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     step = 0;
                     while (step < 750/FACTOR) {}
-                    _LATA1 = 0;
+                    _LATB8 = 0;
                     step = 0;
                     while (step < QTR_TURN) {}
-                    _LATA1 = 1;
+                    _LATB8 = 1;
                     state = LFDriveForward;
                 }
                 
@@ -82,7 +84,7 @@ int main(void) {
                 
             case LFDriveForward:
                 _LATB7 = 1;
-                _LATA1 = 1;
+                _LATB8 = 1;
                 
                 OC2RS = LINE_FOLLOWING_SPEED;
                 OC2R = OC2RS/2;
@@ -92,10 +94,10 @@ int main(void) {
                 if (!inLander && QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && QRD_FAR_LEFT < QRD_THRESHOLD && didCanyon && ballReturned) {
                     step = 0;
                     while (step < 750/FACTOR) {}
-                    _LATA1 = 0;
+                    _LATB8 = 0;
                     step = 0;
                     while (step < QTR_TURN) {}
-                    _LATA1 = 1;
+                    _LATB8 = 1;
                     inLander = 1;
                 }
                 
@@ -195,7 +197,7 @@ int main(void) {
                 while (step < BC_FORWARD) {}
                 
                 // turn 90 degrees left
-                _LATA1 = 0;
+                _LATB8 = 0;
                 step = 0;
                 while (step < QTR_TURN) {
                 }
@@ -213,7 +215,7 @@ int main(void) {
 
                 // drive forward same amount
                 _LATB7 = 1;
-                _LATA1 = 1;
+                _LATB8 = 1;
                 step = 0;
                 while (step < BC_BACKWARD) {}
                 // turn 90 degrees left
@@ -237,7 +239,7 @@ int main(void) {
                     }
                     step = 0;
                     // back up to box
-                    _LATA1 = 0;
+                    _LATB8 = 0;
                     while (step < BR_BACKWARD) {}
                     step = 0;
                     // drop servo to drop ball (31 - 156)
@@ -254,16 +256,16 @@ int main(void) {
 
                     // drive forward same amount
                     _LATB7 = 1;
-                    _LATA1 = 1;
+                    _LATB8 = 1;
                     step = 0;
                     while (step < BR_BACKWARD) {}
                     step = 0;
                     
                     // turn 90 degrees left
-                    _LATA1 = 0;
+                    _LATB8 = 0;
                     while (step < QTR_TURN) {}
                     step = 0;
-                    _LATA1 = 1;
+                    _LATB8 = 1;
                     state = LFDriveForward;
                 }
                 else {
@@ -272,7 +274,7 @@ int main(void) {
                     while (step < BR_FORWARD) {}
                     step = 0;
                     // turn 90 degrees right
-                    _LATA1 = 0;
+                    _LATB8 = 0;
                     while (step < QTR_TURN) {
                     }
                     step = 0;
@@ -292,7 +294,7 @@ int main(void) {
 
                     // drive forward same amount
                     _LATB7 = 1;
-                    _LATA1 = 1;
+                    _LATB8 = 1;
                     step = 0;
                     while (step < BR_BACKWARD) {}
                     step = 0;
@@ -308,7 +310,7 @@ int main(void) {
             case CNDriveForward:
                 // Don't move. Turn LEDs on.
                 // both motors forward
-                _LATA1 = 1;
+                _LATB8 = 1;
                 _LATB7 = 1;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
@@ -349,7 +351,7 @@ int main(void) {
                 
             case CNTurnLeft:
                 // switch direction left wheel
-                _LATA1 = 0;
+                _LATB8 = 0;
                 OC3RS = CANYON_SPEED;
                 OC3R = OC3RS/2;
                 OC2RS = CANYON_SPEED;
