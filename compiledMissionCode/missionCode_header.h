@@ -49,25 +49,7 @@ extern "C" {
 
 #endif	/* XC_HEADER_TEMPLATE_H */
 
-
-
-// 1 : 1/8, 2: 1/4, 4: 1/2, 8: 1
-#define FACTOR 1
-
-#define QRD_THRESHOLD 2048
-#define QRD_BALL_THRESHOLD 1000
-
-// decreasing speeds her up (runs fine at 76)
-#define LINE_FOLLOWING_SPEED 76 // 1/(8MHz/(2*64)) -> (0.5/400)/0.000016 -1 = 77
-
-// best range seems to be .3-.4? .5 worked too but .3 was maybe too sensitive
-#define SHARP_THRESHOLD_LEFT 0.8
-#define SHARP_THRESHOLD_FRONT 1
-#define SHARP_LANDER_THRESHOLD 0.8
-#define QTR_TURN 950/FACTOR
-//#define CANYON_SPEED 3088
-#define CANYON_SPEED 76
-
+// PIN DEFINITIONS
 #define QRD_CENTER ADC1BUF4
 #define QRD_LEFT ADC1BUF13
 #define QRD_RIGHT ADC1BUF14
@@ -77,9 +59,37 @@ extern "C" {
 #define PHOTODIODE_SATELLITE ADC1BUF0
 #define PHOTODIODE_BALLCOLLECT ADC1BUF12
 
+// NUMERICAL VALUES
+// 1 : 1/8, 2: 1/4, 4: 1/2, 8: 1
+#define FACTOR 2
+
+#define QRD_THRESHOLD 2048
+#define QRD_BALL_THRESHOLD 1000
+
+// decreasing integers speeds her up (runs fine at 76)
+#define LINE_FOLLOWING_SPEED 76 // 1/(8MHz/(2*64)) -> (0.5/400)/0.000016 -1 = 77
+
+// working at 0.8 but might be too sensitive
+#define SHARP_THRESHOLD_LEFT 0.8
+#define SHARP_THRESHOLD_FRONT 1
+#define SHARP_LANDER_THRESHOLD 0.8
+
+#define FORWARD_BEFORE_TURN 750
+#define TURN_FACTOR 8
+
+#define QTR_TURN 950/FACTOR
+
+#define START_WAIT 250
+#define BALL_WAIT 1000
+
+#define CANYON_SPEED 60
+//#define CANYON_SPEED 76
+
+#define BALL_IR_THRESHOLD 600
+
 #define BR_FORWARD 800/FACTOR
 #define BR_BACKWARD 800/FACTOR
-#define BC_FORWARD 1200/FACTOR
+#define BC_FORWARD 1000/FACTOR
 #define BC_BACKWARD 2150/FACTOR
 
 #define BR_SERVO_START 95

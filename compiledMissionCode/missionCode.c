@@ -1,13 +1,9 @@
-
-
 #include "xc.h"
 #include <math.h>
-#include <missionCode_header.h>
+#include "missionCode_header.h"
 #pragma config FNOSC = FRCDIV // 8MHz oscillator
 #pragma config OSCIOFNC = OFF
 #pragma config SOSCSRC = DIG
-
-
 
 int main(void) {
     timer_config();
@@ -19,12 +15,12 @@ int main(void) {
     
     static int didCanyon = 0;
     static int ballCollected = 0;
-    static int ballReturned = 0;
+    static int ballReturned = 0
     static int inLander = 0;
     
     // satellite set up configs
     static float IR_READ_VAL = 0.0;
-    static float ALPHA = .8;
+    static float ALPHA = .6;
     static int SERVO_STOPPED = 0;
     static float MAX_READING = 0;
     static float BEST_SERVO = 0;
@@ -38,24 +34,12 @@ int main(void) {
     OC2R = 0;
     OC3R = 0;
     step = 0;
-    while (step < 250/FACTOR) {}
+    while (step < START_WAIT) {}
     
     while(1) {
         
         double SHARP_FRONT = ADC1BUF11*3.3/4095;
         double SHARP_LEFT = ADC1BUF10*3.3/4095;
-        
-        // LEDs debugging, not configured
-        // if (PHOTODIODE_BALLCOLLECT > 600) {
-        //     _LATB8 = 1;
-        // }
-        // else {
-        //     _LATB8 = 0;
-        // }
-        
-//        if (state == LFDriveForward) {
-//            _LATB8 = 1;
-//        } else {_LATB8=0;}
         
         switch(state)
         {
@@ -72,7 +56,7 @@ int main(void) {
                 // sees white on all three?
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     step = 0;
-                    while (step < 750/FACTOR) {}
+                    while (step < FORWARD_BEFORE_TURN/FACTOR) {}
                     _LATB8 = 0;
                     step = 0;
                     while (step < QTR_TURN) {}
@@ -93,7 +77,7 @@ int main(void) {
                 
                 if (!inLander && QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && QRD_FAR_LEFT < QRD_THRESHOLD && didCanyon && ballReturned) {
                     step = 0;
-                    while (step < 750/FACTOR) {}
+                    while (step < FORWARD_BEFORE_TURN/FACTOR) {}
                     _LATB8 = 0;
                     step = 0;
                     while (step < QTR_TURN) {}
@@ -107,7 +91,7 @@ int main(void) {
                     state = Satellite;
                 }
                 
-                else if (!ballCollected && PHOTODIODE_BALLCOLLECT > 600) {
+                else if (!ballCollected && PHOTODIODE_BALLCOLLECT > BALL_IR_THRESHOLD) {
                     state = BallCollect;
                 }
                 
@@ -140,9 +124,9 @@ int main(void) {
                 break;
                 
             case LFTurnLeft:
-                OC3RS = LINE_FOLLOWING_SPEED;
+                OC3RS = LINE_FOLLOWING_SPEED*TURN_FACTOR;
                 OC3R = OC3RS/2;
-                OC2RS = LINE_FOLLOWING_SPEED*8;
+                OC2RS = LINE_FOLLOWING_SPEED;
                 OC2R = OC2RS/2;
                 
                 // if center sees black
@@ -153,9 +137,9 @@ int main(void) {
                 break;
                 
             case LFTurnRight:
-                OC2RS = LINE_FOLLOWING_SPEED;
+                OC2RS = LINE_FOLLOWING_SPEED*TURN_FACTOR;
                 OC2R = OC2RS/2;
-                OC3RS = LINE_FOLLOWING_SPEED*4;
+                OC3RS = LINE_FOLLOWING_SPEED;
                 OC3R = OC3RS/2;
                 
                 // if center sees black
@@ -169,12 +153,14 @@ int main(void) {
                 OC2R = 0;
                 // move servo up until infrared sensor passes threshold, then shoot laser
                 while (OC1R < 130 && SERVO_STOPPED == 0) {
+//                      IR_READ_VAL = PHOTODIODE_SATELLITE;
                     IR_READ_VAL = IR_READ_VAL*ALPHA + (1-ALPHA)*PHOTODIODE_SATELLITE;
                     if (IR_READ_VAL > MAX_READING) {
                         MAX_READING = IR_READ_VAL;
                         BEST_SERVO = OC1R;
                     }
 
+                    
                     OC1R++;
                     step = 0;
                     while (step < 10) {}
@@ -209,7 +195,7 @@ int main(void) {
                 OC2R = 0;
                 OC3R = 0;
                 step = 0;
-                while (step < 1000/FACTOR) {}
+                while (step < BALL_WAIT) {}
                 OC2R = OC2RS/2;
                 OC3R = OC3RS/2;
 
@@ -250,7 +236,7 @@ int main(void) {
                     step = 0;
                     
                     // this causes her to wait for a second for the ball to drop
-                    while (step < 1000/FACTOR) {}
+                    while (step < BALL_WAIT) {}
                     OC2R = OC2RS/2;
                     OC3R = OC3RS/2;
 
@@ -288,7 +274,7 @@ int main(void) {
                     OC2R = 0;
                     OC3R = 0;
                     step = 0;
-                    while (step < 1000/FACTOR) {}
+                    while (step < BALL_WAIT/FACTOR) {}
                     OC2R = OC2RS/2;
                     OC3R = OC3RS/2;
 
@@ -332,7 +318,7 @@ int main(void) {
                     step = 0;
                     
                     // drive forward for a sec, then turn
-                    while (step < 750/FACTOR) {}
+                    while (step < FORWARD_BEFORE_TURN/FACTOR) {}
                     step = 0;
                     state = CNTurnLeft;
                 }
@@ -342,7 +328,7 @@ int main(void) {
                     
                     // drive forward for a sec, then turn
                     step = 0;
-                    while (step < 750/FACTOR) {}
+                    while (step < FORWARD_BEFORE_TURN/FACTOR) {}
                     step = 0;
                     state = CNTurnRight;
                 }
