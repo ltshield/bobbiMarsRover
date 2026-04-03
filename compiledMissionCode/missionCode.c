@@ -2,7 +2,7 @@
 
 #include "xc.h"
 #include <math.h>
-#include <missionCode_header.h>
+#include "servo_test_header.h"
 #pragma config FNOSC = FRCDIV // 8MHz oscillator
 #pragma config OSCIOFNC = OFF
 #pragma config SOSCSRC = DIG
@@ -45,17 +45,6 @@ int main(void) {
         double SHARP_FRONT = ADC1BUF11*3.3/4095;
         double SHARP_LEFT = ADC1BUF10*3.3/4095;
         
-        // LEDs debugging, not configured
-        // if (PHOTODIODE_BALLCOLLECT > 600) {
-        //     _LATB8 = 1;
-        // }
-        // else {
-        //     _LATB8 = 0;
-        // }
-        
-//        if (state == LFDriveForward) {
-//            _LATB8 = 1;
-//        } else {_LATB8=0;}
         
         switch(state)
         {
@@ -140,9 +129,9 @@ int main(void) {
                 break;
                 
             case LFTurnLeft:
-                OC3RS = LINE_FOLLOWING_SPEED;
+                OC3RS = LINE_FOLLOWING_SPEED*8;
                 OC3R = OC3RS/2;
-                OC2RS = LINE_FOLLOWING_SPEED*8;
+                OC2RS = LINE_FOLLOWING_SPEED;
                 OC2R = OC2RS/2;
                 
                 // if center sees black
@@ -153,9 +142,9 @@ int main(void) {
                 break;
                 
             case LFTurnRight:
-                OC2RS = LINE_FOLLOWING_SPEED;
+                OC2RS = LINE_FOLLOWING_SPEED*8;
                 OC2R = OC2RS/2;
-                OC3RS = LINE_FOLLOWING_SPEED*4;
+                OC3RS = LINE_FOLLOWING_SPEED;
                 OC3R = OC3RS/2;
                 
                 // if center sees black
