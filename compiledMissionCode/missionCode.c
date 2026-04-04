@@ -15,7 +15,7 @@ int main(void) {
     
     static int didCanyon = 0;
     static int ballCollected = 0;
-    static int ballReturned = 0
+    static int ballReturned = 0;
     static int inLander = 0;
     
     // satellite set up configs
@@ -168,7 +168,7 @@ int main(void) {
                 }
 
                 SERVO_STOPPED = 1;
-                OC1R = BEST_SERVO;
+                OC1R = BEST_SERVO-10;
 
                 // Laser on
                 _LATB9 = 1;
@@ -203,7 +203,7 @@ int main(void) {
                 _LATB7 = 1;
                 _LATB8 = 1;
                 step = 0;
-                while (step < BC_BACKWARD) {}
+                while (step < BC_BACKWARD-200) {}
                 // turn 90 degrees left
                 _LATB7 = 0;
                 step = 0;
@@ -253,6 +253,7 @@ int main(void) {
                     step = 0;
                     _LATB8 = 1;
                     state = LFDriveForward;
+                    
                 }
                 else {
                     ballReturned = 1;
@@ -278,15 +279,15 @@ int main(void) {
                     OC2R = OC2RS/2;
                     OC3R = OC3RS/2;
 
-                    // drive forward same amount
+//                    // drive forward same amount
                     _LATB7 = 1;
                     _LATB8 = 1;
                     step = 0;
-                    while (step < BR_BACKWARD) {}
+                    while (step < BR_BACKWARD-200) {}
                     step = 0;
                     // turn 90 degrees left
                     _LATB7 = 0;
-                    while (step < QTR_TURN) {}
+                    while (step < QTR_TURN+100) {}
                     step = 0;
                     _LATB7 = 1;
                     state = LFDriveForward;
@@ -302,6 +303,7 @@ int main(void) {
                 OC2R = OC2RS/2;
                 OC3RS = CANYON_SPEED;
                 OC3R = OC3RS/2;
+                
                 // if you see front but not left, turn left
                 if (SHARP_FRONT > SHARP_THRESHOLD_FRONT && SHARP_LEFT < SHARP_THRESHOLD_LEFT) {
                     state = CNTurnLeft;
@@ -321,6 +323,7 @@ int main(void) {
                     while (step < FORWARD_BEFORE_TURN/FACTOR) {}
                     step = 0;
                     state = CNTurnLeft;
+                    step = 0;
                 }
                 
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {

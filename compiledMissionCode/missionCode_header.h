@@ -61,36 +61,36 @@ extern "C" {
 
 // NUMERICAL VALUES
 // 1 : 1/8, 2: 1/4, 4: 1/2, 8: 1
-#define FACTOR 2
+#define FACTOR 1.75
 
 #define QRD_THRESHOLD 2048
 #define QRD_BALL_THRESHOLD 1000
 
 // decreasing integers speeds her up (runs fine at 76)
-#define LINE_FOLLOWING_SPEED 76 // 1/(8MHz/(2*64)) -> (0.5/400)/0.000016 -1 = 77
+#define LINE_FOLLOWING_SPEED 50 // 1/(8MHz/(2*64)) -> (0.5/400)/0.000016 -1 = 77
 
 // working at 0.8 but might be too sensitive
-#define SHARP_THRESHOLD_LEFT 0.8
-#define SHARP_THRESHOLD_FRONT 1
+#define SHARP_THRESHOLD_LEFT 0.7
+#define SHARP_THRESHOLD_FRONT 0.9
 #define SHARP_LANDER_THRESHOLD 0.8
 
-#define FORWARD_BEFORE_TURN 750
-#define TURN_FACTOR 8
+#define FORWARD_BEFORE_TURN 500
+#define TURN_FACTOR 4
 
-#define QTR_TURN 950/FACTOR
+#define QTR_TURN 835/FACTOR
 
-#define START_WAIT 250
-#define BALL_WAIT 1000
+#define START_WAIT 500
+#define BALL_WAIT 1750
 
-#define CANYON_SPEED 60
+#define CANYON_SPEED 50
 //#define CANYON_SPEED 76
 
 #define BALL_IR_THRESHOLD 600
 
-#define BR_FORWARD 800/FACTOR
-#define BR_BACKWARD 800/FACTOR
-#define BC_FORWARD 1000/FACTOR
-#define BC_BACKWARD 2150/FACTOR
+#define BR_FORWARD 700/FACTOR
+#define BR_BACKWARD 700/FACTOR
+#define BC_FORWARD 800/FACTOR
+#define BC_BACKWARD 2000/FACTOR
 
 #define BR_SERVO_START 95
 #define BR_SERVO_END 64
