@@ -22,13 +22,14 @@ int main(void) {
     static float IR_READ_VAL = 0.0;
     static float ALPHA = .6;
     static int SERVO_STOPPED = 0;
-    static float MAX_READING = 0;
-    static float BEST_SERVO = 0;
+    static int MAX_READING = 0;
+    static int BEST_SERVO = BR_SERVO_END;
+    static int SERVO_COUNTER = BR_SERVO_END;
 
     // LF - Line Following
     // CN - Canyon Navigation
-    enum State {Finished, BallCollect, Satellite, LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
-    static enum State state = LeaveLander;
+    enum State {Finished, ReturnToLine, BallCollect, Satellite, LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
+    static enum State state = CNDriveForward;
     
     // Pause before going to allow microcontroller to start up
     OC2R = 0;
@@ -44,6 +45,34 @@ int main(void) {
         switch(state)
         {
             case Finished:
+                // Laser on
+                _LATB9 = 1;
+//                OC1RS = 1249;
+//                OC1R = OC1R;
+//                while(1) {
+//                    OC1RS = 1249;
+//                    OC1R = BEST_SERVO+50;
+//                }
+                break;
+                
+            case ReturnToLine:
+                
+                OC2RS = LINE_FOLLOWING_SPEED;
+                OC2R = OC2RS/2;
+                OC3RS = LINE_FOLLOWING_SPEED;
+                OC3R = OC3RS/2;
+                
+                // sees white on all three?
+                if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
+                    step = 0;
+                    while (step < FORWARD_BEFORE_TURN/FACTOR) {}
+                    _LATB7 = 0;
+                    step = 0;
+                    while (step < QTR_TURN) {}
+                    _LATB7 = 1;
+                    state = LFDriveForward;
+                }
+                
                 break;
                 
             case LeaveLander:
@@ -146,32 +175,36 @@ int main(void) {
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD) {
                     state = LFDriveForward;
                 }
+                
                 break;
             
             case Satellite:
                 OC3R = 0;
                 OC2R = 0;
+                OC1R = BR_SERVO_END;
                 // move servo up until infrared sensor passes threshold, then shoot laser
-                while (OC1R < 130 && SERVO_STOPPED == 0) {
-//                      IR_READ_VAL = PHOTODIODE_SATELLITE;
-                    IR_READ_VAL = IR_READ_VAL*ALPHA + (1-ALPHA)*PHOTODIODE_SATELLITE;
+                while (SERVO_COUNTER < 130 && SERVO_STOPPED == 0) {
+                      IR_READ_VAL = PHOTODIODE_SATELLITE;
+//                    IR_READ_VAL = IR_READ_VAL*ALPHA + (1-ALPHA)*PHOTODIODE_SATELLITE;
                     if (IR_READ_VAL > MAX_READING) {
                         MAX_READING = IR_READ_VAL;
-                        BEST_SERVO = OC1R;
+                        BEST_SERVO = SERVO_COUNTER;
                     }
-
                     
-                    OC1R++;
+                    OC1R = SERVO_COUNTER;
+                    SERVO_COUNTER++;
                     step = 0;
-                    while (step < 10) {}
+                    while (step < 100) {}
 
                 }
 
                 SERVO_STOPPED = 1;
-                OC1R = BEST_SERVO-10;
-
-                // Laser on
-                _LATB9 = 1;
+                OC1R = BEST_SERVO;
+                
+                step = 0;
+                while (step < 1000) {
+                }
+                
                 state = Finished;
                 break;
 
@@ -202,14 +235,15 @@ int main(void) {
                 // drive forward same amount
                 _LATB7 = 1;
                 _LATB8 = 1;
-                step = 0;
-                while (step < BC_BACKWARD-200) {}
-                // turn 90 degrees left
-                _LATB7 = 0;
-                step = 0;
-                while (step < QTR_TURN) {}
-                _LATB7 = 1;
-                state = LFDriveForward;
+                state = ReturnToLine;
+//                step = 0;
+//                while (step < BC_BACKWARD-200) {}
+//                // turn 90 degrees left
+//                _LATB7 = 0;
+//                step = 0;
+//                while (step < QTR_TURN) {}
+//                _LATB7 = 1;
+//                state = LFDriveForward;
                 break;
                 
             case BallReturn:
@@ -240,7 +274,8 @@ int main(void) {
                     OC2R = OC2RS/2;
                     OC3R = OC3RS/2;
 
-                    // drive forward same amount
+//                    state = LeaveLander;
+//                    // drive forward same amount
                     _LATB7 = 1;
                     _LATB8 = 1;
                     step = 0;
@@ -283,14 +318,15 @@ int main(void) {
                     _LATB7 = 1;
                     _LATB8 = 1;
                     step = 0;
-                    while (step < BR_BACKWARD-200) {}
+                    while (step < BR_BACKWARD-50) {}
                     step = 0;
                     // turn 90 degrees left
                     _LATB7 = 0;
-                    while (step < QTR_TURN+100) {}
+                    while (step < QTR_TURN+30) {}
                     step = 0;
                     _LATB7 = 1;
                     state = LFDriveForward;
+//                    state = ReturnToLine;
                 }
                 break;
             
@@ -320,7 +356,7 @@ int main(void) {
                     step = 0;
                     
                     // drive forward for a sec, then turn
-                    while (step < FORWARD_BEFORE_TURN/FACTOR) {}
+                    while (step < (FORWARD_BEFORE_TURN)/FACTOR) {}
                     step = 0;
                     state = CNTurnLeft;
                     step = 0;
@@ -331,7 +367,7 @@ int main(void) {
                     
                     // drive forward for a sec, then turn
                     step = 0;
-                    while (step < FORWARD_BEFORE_TURN/FACTOR) {}
+                    while (step < (FORWARD_BEFORE_TURN)/FACTOR) {}
                     step = 0;
                     state = CNTurnRight;
                 }

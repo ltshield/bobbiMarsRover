@@ -79,7 +79,7 @@ extern "C" {
 
 #define QTR_TURN 835/FACTOR
 
-#define START_WAIT 500
+#define START_WAIT 1000
 #define BALL_WAIT 1750
 
 #define CANYON_SPEED 50
@@ -87,9 +87,9 @@ extern "C" {
 
 #define BALL_IR_THRESHOLD 600
 
-#define BR_FORWARD 700/FACTOR
+#define BR_FORWARD 600/FACTOR
 #define BR_BACKWARD 700/FACTOR
-#define BC_FORWARD 800/FACTOR
+#define BC_FORWARD 700/FACTOR
 #define BC_BACKWARD 2000/FACTOR
 
 #define BR_SERVO_START 95
@@ -159,6 +159,12 @@ static int step = 0;
 void _ISR _OC2Interrupt(void){
     step += 1;
     _OC2IF = 0;
+}
+
+static int SERVOSTEPS = 0;
+void _ISR _OC1Interrupt(void){
+    SERVOSTEPS += 1;
+    _OC1IF = 0;
 }
 
 void timer_config() {
@@ -255,6 +261,11 @@ void CI_laser_LED_config() {
     _OC2IF = 0;
     _OC2IE = 1;
     _OC2IP = 4;
+    
+    // configure count interrupt
+    _OC1IF = 0;
+    _OC1IE = 1;
+    _OC1IP = 5;
     
     // Laser setup
     _TRISB9 = 0;
