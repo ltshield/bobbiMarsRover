@@ -4,44 +4,11 @@
 #ifndef XC_HEADER_TEMPLATE_H
 #define	XC_HEADER_TEMPLATE_H
 
-#include <xc.h> // include processor files - each processor file is guarded.  
-
-// TODO Insert appropriate #include <>
-
-// TODO Insert C++ class definitions if appropriate
-
-// TODO Insert declarations
-
-// Comment a function and leverage automatic documentation with slash star star
-/**
-    <p><b>Function prototype:</b></p>
-  
-    <p><b>Summary:</b></p>
-
-    <p><b>Description:</b></p>
-
-    <p><b>Precondition:</b></p>
-
-    <p><b>Parameters:</b></p>
-
-    <p><b>Returns:</b></p>
-
-    <p><b>Example:</b></p>
-    <code>
- 
-    </code>
-
-    <p><b>Remarks:</b></p>
- */
-// TODO Insert declarations or function prototypes (right here) to leverage 
-// live documentation
+#include <xc.h>
 
 #ifdef	__cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-    // TODO If C++ is being used, regular C code needs function names to have C 
-    // linkage so the functions can be used by the c code. 
 
 #ifdef	__cplusplus
 }
@@ -60,9 +27,6 @@ extern "C" {
 #define PHOTODIODE_BALLCOLLECT ADC1BUF12
 
 // NUMERICAL VALUES
-// 1 : 1/8, 2: 1/4, 4: 1/2, 8: 1
-#define FACTOR 1.75
-
 #define QRD_THRESHOLD 2048
 #define QRD_BALL_THRESHOLD 1000
 
@@ -74,25 +38,38 @@ extern "C" {
 #define SHARP_THRESHOLD_FRONT 0.9
 #define SHARP_LANDER_THRESHOLD 0.8
 
-#define FORWARD_BEFORE_TURN 500
+#define FORWARD_BEFORE_TURN 286
+
+// how much to slow down the other wheel by in order to turn
+// higher turn_factor = sharper turns
 #define TURN_FACTOR 4
+#define QTR_TURN 477
 
-#define QTR_TURN 835/FACTOR
-
+// wait for microcontroller to initialize
 #define START_WAIT 1000
-#define BALL_WAIT 1750
 
+// wait for ball to drop
+#define BALL_WAIT 1000
+
+// maybe speed up in canyon?
 #define CANYON_SPEED 50
-//#define CANYON_SPEED 76
 
+// how know when need to pick up ball
 #define BALL_IR_THRESHOLD 600
 
-#define BR_FORWARD 600/FACTOR
-#define BR_BACKWARD 700/FACTOR
-#define BC_FORWARD 700/FACTOR
-#define BC_BACKWARD 2000/FACTOR
+// drive forward for a time to position
+#define BR_FORWARD 343
+// back up to ball return spot
+#define BR_BACKWARD 400
 
+// drive forward to position
+#define BC_FORWARD 400
+// back up to ball collect spot
+#define BC_BACKWARD 1143
+
+// start servo high to pick up ball
 #define BR_SERVO_START 95
+// drop servo at ball return spot
 #define BR_SERVO_END 64
 
 void config_ad(void)
@@ -161,20 +138,24 @@ void _ISR _OC2Interrupt(void){
     _OC2IF = 0;
 }
 
-static int SERVOSTEPS = 0;
-void _ISR _OC1Interrupt(void){
-    SERVOSTEPS += 1;
-    _OC1IF = 0;
-}
-
 void timer_config() {
     _TON = 1;
     // clock source
     _TCS = 0;
     // prescale is 64
     _TCKPS = 0b10;
+}
+
+void satellite_config() {
+    // satellite set up configs
+    static float IR_READ_VAL = 0.0;
+    static float ALPHA = .6;
+    static int SERVO_STOPPED = 0;
+    static int MAX_READING = 0;
     
-    _RCDIV = 0b110;
+    // default to roughly 60 degrees if failed reading
+    static int BEST_SERVO = BR_SERVO_START;
+    static int SERVO_COUNTER = BR_SERVO_END;
 }
 
 void PWM_config() {
