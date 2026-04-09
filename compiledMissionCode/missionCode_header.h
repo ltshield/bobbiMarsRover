@@ -80,7 +80,7 @@ extern "C" {
 #define QTR_TURN 520
 #define PARTIAL_TURN 400
 
-#define START_WAIT 100
+#define START_WAIT 400
 #define BALL_WAIT 1750
 
 #define CANYON_SPEED 50
@@ -90,10 +90,10 @@ extern "C" {
 
 #define BR_FORWARD 225
 #define BR_BACKWARD 475
-#define BC_FORWARD 300
+#define BC_FORWARD 400
 #define BC_BACKWARD 1100
 
-#define BR_SERVO_START 90
+#define BR_SERVO_START 80
 #define BR_SERVO_END 64
 
 void config_ad(void)

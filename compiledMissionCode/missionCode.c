@@ -13,9 +13,9 @@ int main(void) {
     motor_config();
     CI_laser_LED_config();
     
-    static int didCanyon = 0;
-    static int ballCollected = 0;
-    static int ballReturned = 0;
+    static int didCanyon = 1;
+    static int ballCollected = 1;
+    static int ballReturned = 1;
     static int inLander = 0;
     
     // satellite set up configurations
@@ -29,7 +29,7 @@ int main(void) {
     // LF - Line Following
     // CN - Canyon Navigation
     enum State {Finished, ReturnToLine, BallCollect, Satellite, LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
-    static enum State state = LeaveLander;
+    static enum State state = LFDriveForward;
     
     // Pause before going to allow microcontroller to start up
     OC2R = 0;
@@ -112,9 +112,23 @@ int main(void) {
                     
                     if (QRD_CENTER > QRD_THRESHOLD) {
                         state = LFTurnLeft;
+                        SERVOSTEPS = 0;
                     }
                     
                     inLander = 1;
+                }
+                
+                else if (inLander && SERVOSTEPS > 50) {
+                    _LATB9 = 1;
+                    
+                    while (SHARP_FRONT < SHARP_LANDER_THRESHOLD) {
+                        SHARP_FRONT = ADC1BUF11*3.3/4095;
+                    }
+                    
+                    OC3R = 0;
+                    OC2R = 0;
+                    state = Satellite;
+                    
                 }
                 
                 else if (inLander && SHARP_FRONT > SHARP_LANDER_THRESHOLD){
@@ -197,12 +211,12 @@ int main(void) {
                     OC1R = SERVO_COUNTER;
                     SERVO_COUNTER++;
                     step = 0;
-                    while (step < 100) {}
+                    while (step < 50) {}
 
                 }
 
                 SERVO_STOPPED = 1;
-                OC1R = BEST_SERVO-5;
+                OC1R = BEST_SERVO;
                 
                 step = 0;
                 while (step < 600) {}
