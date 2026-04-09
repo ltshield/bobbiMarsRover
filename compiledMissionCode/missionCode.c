@@ -119,7 +119,6 @@ int main(void) {
                 }
                 
                 else if (inLander && SERVOSTEPS > 50) {
-                    _LATB9 = 1;
                     
                     while (SHARP_FRONT < SHARP_LANDER_THRESHOLD) {
                         SHARP_FRONT = ADC1BUF11*3.3/4095;
