@@ -15,7 +15,9 @@ B0BB1 was a robotic rover created as a class project for BYU's Mechatronics clas
 
 ## B0BB1's Project Outcomes
 Hands-on experience with:
-- PIC24F16KA301 microcontroller
+- PIC24F16KA301 microcontroller configuration and setup for analog and digital
+- PWMs
+- Timers/Interrupts
 - Laser diode
 - Stepper motors and respective motor drivers
 - Buck converters
@@ -27,7 +29,6 @@ Hands-on experience with:
 - MOSFET transistor
 - Soldering to a protoboard
 - Debugging with oscilloscopes and multimeters
-- PWMs
 
 ## B0BB1's Tasks
 Due to lack of funding, B0BB1 was developed and tested on a course meant to mimic the mission requirements of Mars with each task being abstracted as described below:
@@ -52,7 +53,6 @@ Final CAD Design
 (CAD Render After)
 
 (Pin Layout)
-(PIC Microcontroller/QRDs/Photodiode-OpAmp/SHARP/Servo/PWM/AnalogSensing/LaserDiode/MOSFET/BuckConverters/StepperMotors+Drivers)
 (Circuit Diagram)
 
 ## B0BB1's Software
