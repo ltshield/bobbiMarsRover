@@ -1,7 +1,7 @@
 # bobbiMarsRover
 
 ## B0BB1's Complete Run Video
-If you would like to see B0BB1 in action, click [here](../media/IMG_4463.mov)!
+If you would like to see B0BB1 in action, click [here](./media/IMG_4463.mov)!
 
 ## B0BB1's Purpose
 B0BB1 was a robotic rover created as a class project for BYU's Mechatronics class. B0BB1 was built to autonomously explore the surface of Mars and complete a variety of tasks. These tasks included:
@@ -45,7 +45,7 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
 *Initial CAD Design*
 
 <p>
-    <img src="../media/CAD V1.png" width="368" /> <img src="../media/CAD V1.2.png" width="300" />
+    <img src="./media/CAD V1.png" width="368" /> <img src="./media/CAD V1.2.png" width="300" />
 </p>
 
 *Initial Circuit Diagram*
