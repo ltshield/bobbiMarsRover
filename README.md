@@ -44,18 +44,23 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
 - **Data transmission** required the lander to locate and re-enter the lander and detect the vertical location of a satellite above the lander by sensing an IR emitter in the center of the target satellite. Upon locating the vertical location of the satellite, B0BB1 was to turn on a laser thereby representing the transmission of the data that had been gathered during the run.
 
 ## B0BB1's Hardware
-*Initial CAD Design*
+*Initial CAD Design*\
+
 <p>
     <img src="./CAD V1.png" width="368" /> <img src="./CAD V1.2.png" width="300" />
 </p>
 
-*Initial Circuit Diagram*
+*Initial Circuit Diagram*\
+
+
 <img width="558" height="567" alt="image" src="https://github.com/user-attachments/assets/12123f23-8d9e-4004-885d-f6f20dd45baa" />
 
-*Final CAD Design*
+*Final CAD Design*\
+
 (CAD Render After)
 
-*Microcontroller Pin Inventory*
+*Microcontroller Pin Inventory*\
+
 <img width="557" height="700" alt="image" src="https://github.com/user-attachments/assets/720da2cb-6159-482b-af24-d1b947bf9fcd" />
 
 ## B0BB1's Software
