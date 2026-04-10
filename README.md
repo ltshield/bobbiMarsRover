@@ -55,7 +55,7 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
 
 <img width="558" height="567" alt="image" src="https://github.com/user-attachments/assets/12123f23-8d9e-4004-885d-f6f20dd45baa" />
 
-*Final CAD Design*\
+*Final CAD Design*
 
 (CAD Render After)
 
