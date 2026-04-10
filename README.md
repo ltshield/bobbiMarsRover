@@ -49,12 +49,17 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
     <img src="./CAD V1.png" width="368" /> <img src="./CAD V1.2.png" width="300" />
 </p>
 
+*Initial Circuit Diagram*
+<img width="558" height="567" alt="image" src="https://github.com/user-attachments/assets/12123f23-8d9e-4004-885d-f6f20dd45baa" />
+
 *Final CAD Design*
 (CAD Render After)
 
-(Pin Layout)
-(Circuit Diagram)
+*Microcontroller Pin Inventory*
+<img width="557" height="700" alt="image" src="https://github.com/user-attachments/assets/720da2cb-6159-482b-af24-d1b947bf9fcd" />
 
 ## B0BB1's Software
 (FSM Diagram)
-(Alpha Smoothing)
+
+Implemented Alpha Smoothing Filter for Data Transmission Milestone For Noise Reduction:
+IR_READ_VAL = IR_READ_VAL*ALPHA + (1-ALPHA)*PHOTODIODE_SATELLITE;
