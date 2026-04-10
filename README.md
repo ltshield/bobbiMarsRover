@@ -67,4 +67,5 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
 (FSM Diagram)
 
 Implemented Alpha Smoothing Filter for Data Transmission Milestone For Noise Reduction:
+
 IR_READ_VAL = IR_READ_VAL*ALPHA + (1-ALPHA)*PHOTODIODE_SATELLITE;
