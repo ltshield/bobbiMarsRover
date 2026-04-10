@@ -13,9 +13,9 @@ int main(void) {
     motor_config();
     CI_laser_LED_config();
     
-    static int didCanyon = 1;
-    static int ballCollected = 1;
-    static int ballReturned = 1;
+    static int didCanyon = 0;
+    static int ballCollected = 0;
+    static int ballReturned = 0;
     static int inLander = 0;
     
     // satellite set up configurations
@@ -29,7 +29,7 @@ int main(void) {
     // LF - Line Following
     // CN - Canyon Navigation
     enum State {Finished, ReturnToLine, BallCollect, Satellite, LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
-    static enum State state = LFDriveForward;
+    static enum State state = LeaveLander;
     
     // Pause before going to allow microcontroller to start up
     OC2R = 0;
@@ -141,7 +141,7 @@ int main(void) {
                 }
                 
                 // see all black, and wall on left, go to CNDrive
-                else if (SERVOSTEPS > 200 && !didCanyon && QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
+                else if (SERVOSTEPS > 50 && !didCanyon && QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     state = CNDriveForward;
                 }
                 
@@ -152,18 +152,22 @@ int main(void) {
                 
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD) {
                     state = LFTurnRight;
+                    SERVOSTEPS = 0;
                 }
                 
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     state = LFTurnLeft;
+                    SERVOSTEPS = 0;
                 }
                 
                 // if center sees black
                 else if (QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD) {
                     state = LFTurnRight;
+                    SERVOSTEPS = 0;
                 }
                 else if (QRD_CENTER > QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     state = LFTurnLeft;
+                    SERVOSTEPS = 0;
                 }
                     
                 break;

@@ -58,10 +58,10 @@ extern "C" {
 #define BR_FORWARD 225
 #define BR_BACKWARD 475
 #define BC_FORWARD 400
-#define BC_BACKWARD 1100
+#define BC_BACKWARD 1200
 
-#define BR_SERVO_START 80
-#define BR_SERVO_END 64
+#define BR_SERVO_START 84
+#define BR_SERVO_END 62
 
 void config_ad(void)
 {
