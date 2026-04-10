@@ -2,7 +2,7 @@
 
 ## B0BB1's Complete Run Video
 <p align="center" width="100%">
-<video src="./IMG_4463.mov" width="80%" controls></video>
+    <video src="./IMG_4463.mov" width="80%" controls></video>
 </p>
 
 ## B0BB1's Purpose
