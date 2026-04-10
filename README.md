@@ -29,7 +29,7 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
 
 ## B0BB1's Hardware
 <p align="center">
-    <img src="./CAD V1.2.png" width="200" />
+    <img src="./CAD V1.2.png" width="600" />
 </p>
 
 (CAD Render After)
