@@ -1,43 +1,75 @@
 #include "xc.h"
+#include <math.h>
 #include "missionCode_header.h"
-
-static int step = 0;
+#pragma config FNOSC = FRCDIV // 8MHz oscillator
+#pragma config OSCIOFNC = OFF
+#pragma config SOSCSRC = DIG
 
 int main(void) {
-    PWM_and_timer_config();
-    pre_adc_pin_config();
-    
+    timer_config();
+    PWM_config();
+    sensor_config();
     config_ad();
-    
-    post_adc_pin_config();
+    motor_config();
+    CI_laser_LED_config();
     
     static int didCanyon = 0;
+    static int ballCollected = 0;
     static int ballReturned = 0;
+    static int inLander = 0;
     
+    // satellite set up configurations
+    static float IR_READ_VAL = 0.0;
+    static float ALPHA = .8;
+    static int SERVO_STOPPED = 0;
+    static int MAX_READING = 0;
+    static int BEST_SERVO = 85;
+    static int SERVO_COUNTER = BR_SERVO_END;
+
     // LF - Line Following
     // CN - Canyon Navigation
-    enum State {LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
+    enum State {Finished, ReturnToLine, BallCollect, Satellite, LeaveLander, BallReturn, LFTurnLeft, LFDriveForward, LFTurnRight, CNTurnLeft, CNTurnRight, CNDriveForward};
     static enum State state = LeaveLander;
     
+    // Pause before going to allow microcontroller to start up
     OC2R = 0;
     OC3R = 0;
     step = 0;
-    while (step < 250/FACTOR) {}
+    while (step < START_WAIT) {}
     
     while(1) {
-        
         
         double SHARP_FRONT = ADC1BUF11*3.3/4095;
         double SHARP_LEFT = ADC1BUF10*3.3/4095;
         
-        // LEDs
-//        _LATB7 = (SHARP_FRONT > SHARP_THRESHOLD_FRONT);
-        _LATB7 = didCanyon;
-//        _LATB8 = (SHARP_LEFT > SHARP_THRESHOLD_LEFT);
-        _LATB8 = (QRD_BALL_RETURN*3.3/4095 > 1);
-        
         switch(state)
         {
+            case Finished:
+                // Laser on
+                _LATB9 = 1;
+                
+                break;
+                
+            case ReturnToLine:
+                
+                OC2RS = LINE_FOLLOWING_SPEED;
+                OC2R = OC2RS/2;
+                OC3RS = LINE_FOLLOWING_SPEED;
+                OC3R = OC3RS/2;
+                
+                // sees white on all three?
+                if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
+                    step = 0;
+                    while (step < FORWARD_BEFORE_TURN) {}
+                    _LATB7 = 0;
+                    step = 0;
+                    while (step < QTR_TURN) {}
+                    _LATB7 = 1;
+                    state = LFDriveForward;
+                }
+                
+                break;
+                
             case LeaveLander:
                 
                 OC2RS = LINE_FOLLOWING_SPEED;
@@ -48,229 +80,366 @@ int main(void) {
                 // sees white on all three?
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     step = 0;
-                    while (step < 650/FACTOR) {}
-                    _LATA1 = 0;
+                    while (step < FORWARD_BEFORE_TURN) {}
+                    _LATB8 = 0;
                     step = 0;
-                    while (step < QTR_TURN) {}
-                    _LATA1 = 1;
-                    state = LFDriveForward;
+                    while (step < PARTIAL_TURN) {}
+                    _LATB8 = 1;
+                    
+                    if (QRD_CENTER > QRD_THRESHOLD) {
+                        state = LFTurnLeft;
+                    }
                 }
                 
                 break;
                 
             case LFDriveForward:
-                
-                // Laser on
-                _LATB12 = 1;
-                
-                _LATA0 = 1;
-                _LATA1 = 1;
+                _LATB7 = 1;
+                _LATB8 = 1;
                 
                 OC2RS = LINE_FOLLOWING_SPEED;
                 OC2R = OC2RS/2;
                 OC3RS = LINE_FOLLOWING_SPEED;
                 OC3R = OC3RS/2;
                 
+                if (!inLander && QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && QRD_FAR_LEFT < QRD_THRESHOLD && didCanyon && ballReturned) {
+                    step = 0;
+                    while (step < FORWARD_BEFORE_TURN) {}
+                    _LATB8 = 0;
+                    step = 0;
+                    while (step < PARTIAL_TURN) {}
+                    _LATB8 = 1;
+                    
+                    if (QRD_CENTER > QRD_THRESHOLD) {
+                        state = LFTurnLeft;
+                        SERVOSTEPS = 0;
+                    }
+                    
+                    inLander = 1;
+                }
+                
+                else if (inLander && SERVOSTEPS > 50) {
+                    
+                    while (SHARP_FRONT < SHARP_LANDER_THRESHOLD) {
+                        SHARP_FRONT = ADC1BUF11*3.3/4095;
+                    }
+                    
+                    OC3R = 0;
+                    OC2R = 0;
+                    state = Satellite;
+                    
+                }
+                
+                else if (inLander && SHARP_FRONT > SHARP_LANDER_THRESHOLD){
+                    OC3R = 0;
+                    OC2R = 0;
+                    state = Satellite;
+                }
+                
+                else if (!ballCollected && PHOTODIODE_BALLCOLLECT > BALL_IR_THRESHOLD) {
+                    state = BallCollect;
+                }
+                
                 // see all black, and wall on left, go to CNDrive
-                if (QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
+                else if (SERVOSTEPS > 50 && !didCanyon && QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     state = CNDriveForward;
                 }
-                // see white and left sees box
-                else if (!ballReturned && QRD_CENTER < QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
+                
+                // see white and left sees box and ball has been collected, return ball
+                else if (ballCollected && !ballReturned && QRD_CENTER < QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
                     state = BallReturn;
                 }
                 
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD) {
                     state = LFTurnRight;
+                    SERVOSTEPS = 0;
                 }
                 
                 else if (QRD_CENTER < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     state = LFTurnLeft;
+                    SERVOSTEPS = 0;
                 }
                 
                 // if center sees black
                 else if (QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD) {
                     state = LFTurnRight;
+                    SERVOSTEPS = 0;
                 }
                 else if (QRD_CENTER > QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD) {
                     state = LFTurnLeft;
+                    SERVOSTEPS = 0;
                 }
+                    
                 break;
                 
             case LFTurnLeft:
-                OC3RS = LINE_FOLLOWING_SPEED;
+                OC3RS = LINE_FOLLOWING_SPEED*TURN_FACTOR;
                 OC3R = OC3RS/2;
-                OC2RS = LINE_FOLLOWING_SPEED*4;
+                OC2RS = LINE_FOLLOWING_SPEED;
                 OC2R = OC2RS/2;
                 
                 // if center sees black
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD) {
                     state = LFDriveForward;
                 }
+                
                 break;
                 
             case LFTurnRight:
-                OC2RS = LINE_FOLLOWING_SPEED;
+                OC2RS = LINE_FOLLOWING_SPEED*TURN_FACTOR;
                 OC2R = OC2RS/2;
-                OC3RS = LINE_FOLLOWING_SPEED*4;
+                OC3RS = LINE_FOLLOWING_SPEED;
                 OC3R = OC3RS/2;
                 
                 // if center sees black
                 if (QRD_CENTER < QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD) {
                     state = LFDriveForward;
                 }
+                
                 break;
             
+            case Satellite:
+                OC3R = 0;
+                OC2R = 0;
+                OC1R = 75;
+                // move servo up until infrared sensor passes threshold, then shoot laser
+                while (SERVO_COUNTER < 120 && SERVO_STOPPED == 0) {
+//                      IR_READ_VAL = PHOTODIODE_SATELLITE;
+                    IR_READ_VAL = IR_READ_VAL*ALPHA + (1-ALPHA)*PHOTODIODE_SATELLITE;
+                    if (IR_READ_VAL > MAX_READING) {
+                        MAX_READING = IR_READ_VAL;
+                        BEST_SERVO = SERVO_COUNTER;
+                    }
+                    
+                    OC1R = SERVO_COUNTER;
+                    SERVO_COUNTER++;
+                    step = 0;
+                    while (step < 50) {}
+
+                }
+
+                SERVO_STOPPED = 1;
+                OC1R = BEST_SERVO;
+                
+                step = 0;
+                while (step < 600) {}
+                
+                state = Finished;
+                break;
+
+                
+            case BallCollect:
+                // move forward, turn left, back up into ball collect, collect ball, wait, move forward, turn right, line following
+                ballCollected = 1;
+                step = 0;
+                while (step < BC_FORWARD) {}
+                
+                // turn 90 degrees left
+                _LATB8 = 0;
+                step = 0;
+                while (step < QTR_TURN-30) {
+                }
+                
+                // back up to box
+                _LATB7 = 0;
+                step = 0;
+                while (step < BC_BACKWARD) {}
+                OC2R = 0;
+                OC3R = 0;
+                step = 0;
+                while (step < BALL_WAIT) {}
+                OC2R = OC2RS/2;
+                OC3R = OC3RS/2;
+
+                // drive forward same amount
+                _LATB7 = 1;
+                _LATB8 = 1;
+
+                while (QRD_CENTER > QRD_THRESHOLD && QRD_RIGHT > QRD_THRESHOLD && QRD_LEFT > QRD_THRESHOLD) {}
+                
+                step = 0;
+                while (step < FORWARD_BEFORE_TURN) {}
+                _LATB7 = 0;
+                step = 0;
+                while (step < PARTIAL_TURN) {}
+                _LATB7 = 1;
+
+                if (QRD_CENTER > QRD_THRESHOLD) {
+                    state = LFTurnRight;
+                }
+                else {
+                    state = LFDriveForward;
+                }
+
+                break;
+                
             case BallReturn:
                 ballReturned = 1;
                 // if White goes low
                 if (QRD_BALL_RETURN < QRD_BALL_THRESHOLD) {
                     step = 0;
-                    while (step < BC_FORWARD) {}
+                    while (step < BR_FORWARD) {}
                     step = 0;
                     // turn 90 degrees right
-                    _LATA0 = 0;
-                    while (step < QTR_TURN) {
+                    _LATB7 = 0;
+                    while (step < QTR_TURN-20) {
                     }
                     step = 0;
                     // back up to box
-                    _LATA1 = 0;
-                    while (step < BC_BACKWARD) {}
+                    _LATB8 = 0;
+                    while (step < BR_BACKWARD) {}
                     step = 0;
                     // drop servo to drop ball (31 - 156)
-                    while (OC1R > BC_SERVO_END) {OC1R--;}
+                    while (OC1R > BR_SERVO_END) {OC1R--;}
                     // leave servo down
                     OC2R = 0;
                     OC3R = 0;
                     step = 0;
-                    while (step < 1000/FACTOR) {}
+                    
+                    // this causes her to wait for a second for the ball to drop
+                    while (step < BALL_WAIT) {}
                     OC2R = OC2RS/2;
                     OC3R = OC3RS/2;
 
                     // drive forward same amount
-                    _LATA0 = 1;
-                    _LATA1 = 1;
+                    _LATB7 = 1;
+                    _LATB8 = 1;
+
                     step = 0;
-                    while (step < BC_BACKWARD) {}
+                    while (step < FORWARD_BEFORE_TURN) {}
+                    _LATB8 = 0;
                     step = 0;
-                    // turn 90 degrees left
-                    _LATA1 = 0;
-                    while (step < QTR_TURN) {}
-                    step = 0;
-                    _LATA1 = 1;
-                    state = LFDriveForward;
+                    while (step < PARTIAL_TURN) {}
+                    _LATB8 = 1;
+                    
+                    if (QRD_CENTER > QRD_THRESHOLD) {
+                        state = LFTurnLeft;
+                    }
+                    
                 }
                 else {
                     ballReturned = 1;
                     step = 0;
-                    while (step < BC_FORWARD) {}
+                    while (step < BR_FORWARD) {}
                     step = 0;
                     // turn 90 degrees right
-                    _LATA1 = 0;
-                    while (step < QTR_TURN) {
+                    _LATB8 = 0;
+                    while (step < QTR_TURN-20) {
                     }
                     step = 0;
                     // back up to box
-                    _LATA0 = 0;
-                    while (step < BC_BACKWARD) {}
+                    _LATB7 = 0;
+                    while (step < BR_BACKWARD) {}
                     step = 0;
                     // drop servo to drop ball (31 - 156)
-                    while (OC1R > BC_SERVO_END) {OC1R--;}
+                    while (OC1R > BR_SERVO_END) {OC1R--;}
                     // leave servo down
                     OC2R = 0;
                     OC3R = 0;
                     step = 0;
-                    while (step < 1000/FACTOR) {}
+                    while (step < BALL_WAIT) {}
                     OC2R = OC2RS/2;
                     OC3R = OC3RS/2;
 
                     // drive forward same amount
-                    _LATA0 = 1;
-                    _LATA1 = 1;
+                    _LATB7 = 1;
+                    _LATB8 = 1;
+
                     step = 0;
-                    while (step < BC_BACKWARD) {}
+                    while (step < FORWARD_BEFORE_TURN) {}
+                    _LATB7 = 0;
                     step = 0;
-                    // turn 90 degrees left
-                    _LATA0 = 0;
-                    while (step < QTR_TURN) {}
-                    step = 0;
-                    _LATA0 = 1;
-                    state = LFDriveForward;
+                    while (step < PARTIAL_TURN) {}
+                    _LATB7 = 1;
+                    
+                    if (QRD_CENTER > QRD_THRESHOLD) {
+                        state = LFTurnRight;
+                    }
+                    
                 }
+                
                 break;
             
             case CNDriveForward:
-                // Don't move. Turn LEDs on.
                 // both motors forward
-                _LATA1 = 1;
-                _LATA0 = 1;
+                _LATB8 = 1;
+                _LATB7 = 1;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
                 OC3RS = CANYON_SPEED;
                 OC3R = OC3RS/2;
+                
                 // if you see front but not left, turn left
-                if (SHARP_FRONT > SHARP_THRESHOLD_FRONT && SHARP_LEFT < SHARP_THRESHOLD_LEFT) {
+                if (SHARP_FRONT > SHARP_THRESHOLD_FRONT && SHARP_LEFT < SHARP_CANYON_LEFT) {
                     state = CNTurnLeft;
+                    step = 0;
                 }
                 // if you see front and left, turn right
-                else if (SHARP_FRONT > SHARP_THRESHOLD_FRONT && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
+                else if (SHARP_FRONT > SHARP_THRESHOLD_FRONT && SHARP_LEFT > SHARP_CANYON_LEFT) {
                     state = CNTurnRight;
+                    step = 0;
                 }
                 
-                else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT < SHARP_THRESHOLD_LEFT) {
+                else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT < SHARP_CANYON_LEFT) {
                     didCanyon = 1;
+
                     step = 0;
-                    while (step < 400/FACTOR) {}
+                    while (step < FORWARD_BEFORE_TURN) {}
+                    _LATB8 = 0;
                     step = 0;
-                    state = CNTurnLeft;
+                    while (step < PARTIAL_TURN) {}
+                    _LATB8 = 1;
+                    
+                    if (QRD_CENTER > QRD_THRESHOLD) {
+                        state = LFTurnLeft;
+                    }
                 }
                 
-                else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT > SHARP_THRESHOLD_LEFT) {
+                else if (QRD_CENTER < QRD_THRESHOLD && QRD_RIGHT < QRD_THRESHOLD && QRD_LEFT < QRD_THRESHOLD && SHARP_LEFT > SHARP_CANYON_LEFT) {
                     didCanyon = 1;
+                    
                     step = 0;
-                    while (step < 400/FACTOR) {}
+                    while (step < FORWARD_BEFORE_TURN) {}
+                    _LATB7 = 0;
                     step = 0;
-                    state = CNTurnRight;
+                    while (step < PARTIAL_TURN) {}
+                    _LATB7 = 1;
+                    
+                    if (QRD_CENTER > QRD_THRESHOLD) {
+                        state = LFTurnRight;
+                    }
                 }
                 
                 break;
                 
             case CNTurnLeft:
                 // switch direction left wheel
-                _LATA1 = 0;
+                _LATB8 = 0;
                 OC3RS = CANYON_SPEED;
                 OC3R = OC3RS/2;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
-                if (step > QTR_TURN && didCanyon) {
-                    state = LFDriveForward;
-                    step = 0;
-                }
+                
                 // if step counter runs out
-                else if (step > QTR_TURN) {
+                if (step > QTR_TURN) {
                     state = CNDriveForward;
-                    step = 0;
                 }
+                
                 break;
                 
             case CNTurnRight:
                 // switch direction right wheel
-                _LATA0 = 0;
+                _LATB7 = 0;
                 OC2RS = CANYON_SPEED;
                 OC2R = OC2RS/2;
                 OC3RS = CANYON_SPEED;
                 OC3R = OC3RS/2;
                 
-                if (step > QTR_TURN && didCanyon) {
-                    state = LFDriveForward;
-                    step = 0;
+                // if step counter runs out
+                if (step > QTR_TURN) {
+                    state = CNDriveForward;
                 }
                 
-                // if step counter runs out
-                else if (step > QTR_TURN) {
-                    state = CNDriveForward;
-                    step = 0;
-                }
                 break;
                 
             default:
