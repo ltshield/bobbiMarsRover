@@ -1,4 +1,3 @@
-
 // This is a guard condition so that contents of this file are not included
 // more than once.  
 #ifndef XC_HEADER_TEMPLATE_H
@@ -39,7 +38,7 @@ extern "C" {
 #define SHARP_THRESHOLD_LEFT 1.0
 #define SHARP_CANYON_LEFT 0.5
 #define SHARP_THRESHOLD_FRONT 0.8
-#define SHARP_LANDER_THRESHOLD 0.6
+#define SHARP_LANDER_THRESHOLD 0.5
 
 #define FORWARD_BEFORE_TURN 286
 #define TURN_FACTOR 4.5
@@ -51,7 +50,6 @@ extern "C" {
 #define BALL_WAIT 1750
 
 #define CANYON_SPEED 50
-//#define CANYON_SPEED 76
 
 #define BALL_IR_THRESHOLD 600
 
