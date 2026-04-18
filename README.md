@@ -1,7 +1,7 @@
 # bobbiMarsRover
 
 ## B0BB1's Complete Run Video
-If you would like to see B0BB1 in action, click [here](./media/IMG_4463.mov)!
+If you would like to see B0BB1 in action, click [here](./media/bobbiCompleteRun.mp4) to download the 8MB video or click this [link](https://drive.google.com/file/d/1nDhETIhF9cmQp8aQsemauP2_QDJv6Om5/view?usp=sharing)!
 
 ## B0BB1's Purpose
 B0BB1 was a robotic rover created as a class project for BYU's Mechatronics class. B0BB1 was built to autonomously explore the surface of Mars and complete a variety of tasks. These tasks included:
