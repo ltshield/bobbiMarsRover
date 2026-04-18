@@ -62,7 +62,7 @@ Due to lack of funding, B0BB1 was developed and tested on a course meant to mimi
 <img width="557" height="700" alt="image" src="https://github.com/user-attachments/assets/720da2cb-6159-482b-af24-d1b947bf9fcd" />
 
 ## B0BB1's Software
-![(FSM Diagram)](https://github.com/ltshield/bobbiMarsRover/blob/main/media/meen330_FSM_diagram.svg)
+![(FSM Diagram)](https://github.com/ltshield/bobbiMarsRover/blob/main/media/meen330_bobbi_FSM.drawio.svg)
 
 Implemented Alpha Smoothing Filter for Data Transmission Milestone For Noise Reduction:
 
